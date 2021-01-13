@@ -9,17 +9,21 @@ defmodule Chat.UserController do
   end
 
   defp gen_token_from_refresh(%Plug.Conn{} = conn) do
-    %{"refresh_token" => refresh} = Plug.Conn.fetch_cookies(conn).req_cookies
+    refresh = Map.get(Plug.Conn.fetch_cookies(conn).req_cookies, "refresh_token", nil)
 
-    case Chat.RefreshToken.verify_and_validate(refresh) do
-      {:ok, claims} -> {Plug.Auth.gen_user_token(claims), refresh, claims}
-      {:error, _} -> {nil, nil, nil}
+    if is_nil(refresh) do
+      {nil, nil, nil}
+    else
+      case Chat.RefreshToken.verify_and_validate(refresh) do
+        {:ok, claims} -> {Plug.Auth.gen_user_token(claims), refresh, claims}
+        {:error, _} -> {nil, nil, nil}
+      end
     end
   end
 
   def refresh_token(%Plug.Conn{} = conn) do
     %{"token" => token} = conn.params
-    %{"refresh_token" => refresh} = Plug.Conn.fetch_cookies(conn).req_cookies
+    refresh = Map.get(Plug.Conn.fetch_cookies(conn).req_cookies, "refresh_token", nil)
 
     {token, refresh, user} =
       if is_nil(token) do
